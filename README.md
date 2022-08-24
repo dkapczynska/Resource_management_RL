@@ -22,5 +22,8 @@ The speed depends on the current total computing power that is based on current 
   self.cost = np.sqrt(self.vm_1 * 20 + self.vm_2 * 35 + self.vm_3 * 75)
   ```
 Current storage capacity is set for:
+
+
+
 ![image](https://user-images.githubusercontent.com/72708718/186509527-ec4caca1-5bc0-4631-a14f-ad5e1fdfb6dd.png)
 
