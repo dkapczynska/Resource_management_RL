@@ -32,7 +32,7 @@ class Storage:
             raise ValueError("Selected VM type does not exist.")
         return vm_in_use
 
-    def _check_if_available(self, number):
+    def _check_if_available_(self, number, currently_in_use):
         """
         Method that checks whether there is machine in the storage that can be added
 
@@ -40,25 +40,8 @@ class Storage:
             number(int) - number of type of virtual machines to be checked)
         """
         vm_in_use = self._select_machine(number)
-        cap = vm_in_use["capacity"]
-        if cap == 0:
+        vm_left = vm_in_use["capacity"] - currently_in_use
+        if vm_left <= 0:
             return 0
         else:
             return 1
-
-    def _add_machine_from_storage(self, number):
-        """
-        Method that adds virtual machine from the storage to the Distributed App Simulator
-
-        Parameters:
-            number(int) - number of type of virtual machines to be added (possible 1, 2 or 3)
-        """
-        vm_in_use = self._select_machine(number)
-        if self._check_if_available(number):
-            vm_in_use["capacity"] -= 1
-        else:
-            pass  # if not machine is available do nothing
-
-    def _return_machine_to_storage(self, number):
-        vm_in_use = self._select_machine(number)
-        vm_in_use["capacity"] += 1
