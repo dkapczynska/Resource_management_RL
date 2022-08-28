@@ -41,6 +41,9 @@ class Sim(Env):
         beta(float):
             Constant numerical value that assign weight to memory in total computing power equation
 
+        gamma(float):
+            Numerical value of discounting factor
+
         request_completed(int):
             Number of requests that have been successfully completed since beginning of episode
 
@@ -83,15 +86,8 @@ class Sim(Env):
         """
         self.queue_array = []  # clear the queue
         for request in range(0, random.randint(10, 15)):  # fill in the queue with requests
-            request_size = random.randint(1, 30)
+            request_size = random.randint(1, 5)
             self.queue_array.append(request_size)
-        # self.queue_array = [12, 12, 4, 2, 4, 5, 7, 4, 3, 2, 5, 6, 5, 5, 6]
-
-    def _calculate_total_comp_power(self):
-        vm1_sum = self.vm_1 * (self.alpha * self.storage.vm1['cpu'] + self.beta * self.storage.vm1['memory'])
-        vm2_sum = self.vm_2 * (self.alpha * self.storage.vm2['cpu'] + self.beta * self.storage.vm2['memory'])
-        vm3_sum = self.vm_3 * (self.alpha * self.storage.vm3['cpu'] + self.beta * self.storage.vm3['memory'])
-        self.computing_power = np.round_(vm1_sum + vm2_sum + vm3_sum, 2)
 
     def _calculate_cost(self):
         vm1_cost = self.storage.vm1['cost'] * self.vm_1
@@ -100,11 +96,11 @@ class Sim(Env):
         cost = np.round_((vm1_cost + vm2_cost + vm3_cost) / 3, 2)  # np.sqrt
         return cost
 
-    def _calculate_utility_function(self, qos, cost):  # <---------------------------- MAYBE BETTER WAY TO SET THIS UP
+    def _calculate_utility_function(self, qos, cost):
         if qos >= self.sla:
             penalty = 0
         else:
-            penalty = 10
+            penalty = 100
         self.state = ((self.state + cost) / 2) + penalty
 
     def _calculate_quality_of_service(self, time_per_step):
@@ -115,13 +111,17 @@ class Sim(Env):
             qos = np.round_(time_per_step / request_completed, 4)
         return qos
 
-    def _calculate_reward(self):  # <---------------------------- MAYBE BETTER WAY TO SET THIS UP
+    def _calculate_reward(self, qos, prev_cost, cost):
         """
          reward clipping (values from -1  to 1)
          so the gradient doesn't take "too big" steps
-         + discounting factor gamma <------------------ TO ADD ?
         """
-        return np.round(self.state / 1000, 2)
+        if prev_cost >= cost:
+            return 1
+        elif qos < self.sla:
+            return -1
+        else:
+            return 0
 
     def _apply_action(self, action):
         """
@@ -155,7 +155,7 @@ class Sim(Env):
 
     def _simulate_distributed_app(self):
         # prepare arguments to pass to the application
-        vm1_lst = ['vm1'] * self.vm_1  # <---------------- STOP
+        vm1_lst = ['vm1'] * self.vm_1
         vm2_lst = ['vm2'] * self.vm_2
         vm3_lst = ['vm3'] * self.vm_3
         machines = vm1_lst + vm2_lst + vm3_lst
@@ -171,14 +171,6 @@ class Sim(Env):
                                          machines=machines,
                                          resources=resources)
 
-        """distributed_app = DistributedApp(queue_array=self.queue_array,
-                                         alpha=0.5,
-                                         beta=0.5,
-                                         machines=['vm1', 'vm2', 'vm1', 'vm3'],
-                                         resources={'vm1': [10, 50],
-                                                    'vm2': [15, 75],
-                                                    'vm3': [25, 75]})"""
-
         time_per_step = distributed_app._perform_all_requests()
         return time_per_step
 
@@ -190,6 +182,9 @@ class Sim(Env):
         3. Reward is calculated
         4. Check if step is finished
         """
+        # Previous cost
+        prev_cost = self._calculate_cost()
+
         # Generate new workload fot the current step
         self._generate_workload()
 
@@ -209,7 +204,7 @@ class Sim(Env):
         self._calculate_utility_function(qos, cost)
 
         # calculate the reward
-        reward = self._calculate_reward()
+        reward = self._calculate_reward(qos, cost, prev_cost)
 
         self.steps -= 1
         if self.steps <= 0:
@@ -220,7 +215,7 @@ class Sim(Env):
 
         info = {'Quality of Service': qos,
                 'Current cost': cost,
-                'Queue len:': len(self.queue_array),
+                'Queue len': len(self.queue_array),
                 'Timer': time_per_step,
                 'VM type I': self.vm_1,
                 'VM type II': self.vm_2,
