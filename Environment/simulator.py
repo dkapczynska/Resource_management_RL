@@ -66,11 +66,17 @@ class Sim(Env):
             Number of time units that simulation will last. Each step takes one time unit
 
         """
+        super(Sim, self).__init__()
+        
         self.sla = sla
         self.vm_1 = vm_1
         self.vm_2 = vm_2
         self.vm_3 = vm_3
         self.steps = steps
+        self.vm_1_init = vm_1
+        self.vm_2_init = vm_2
+        self.vm_3_init = vm_3
+        self.steps_init = steps
         self.alpha = alpha
         self.beta = beta
         self.request_completed = 0
@@ -116,10 +122,11 @@ class Sim(Env):
          reward clipping (values from -1  to 1)
          so the gradient doesn't take "too big" steps
         """
-        if prev_cost >= cost:
-            return 1
-        elif qos < self.sla:
+        # print("Prev cost: ", prev_cost, "current cost", cost)
+        if qos < self.sla:
             return -1
+        elif prev_cost >= cost:
+            return 1
         else:
             return 0
 
@@ -225,12 +232,17 @@ class Sim(Env):
         return np.array([self.state, ], dtype=np.float32), reward, done, info
 
     def reset(self, **kwargs):
+        
         # create storage
-        self.storage = Storage(vm1={"cpu": 10, "memory": 50, "capacity": 25, "cost": 20},
-                               vm2={"cpu": 17, "memory": 65, "capacity": 18, "cost": 35},
-                               vm3={"cpu": 25, "memory": 90, "capacity": 10, "cost": 75})
+        self.storage = Storage(vm1={"cpu": 8, "memory": 8, "capacity": 15, "cost": 20},
+                               vm2={"cpu": 16, "memory": 10, "capacity": 10, "cost": 35},
+                               vm3={"cpu": 32, "memory": 24, "capacity": 3, "cost": 75})
 
         # reset parameters for the initial setting
+        self.vm_1 = self.vm_1_init
+        self.vm_2 = self.vm_2_init
+        self.vm_3 = self.vm_3_init
+        self.steps = self.steps_init
         self.state = 0
         self.request_completed = 0
         self.queue_array = []
