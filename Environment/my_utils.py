@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 
 def viz_performance(cumulative_reward, utility_function, qos, queue_len, cost, no_of_vm, steps, sla):
     # plot config
-    plt.rc('axes', labelsize=15) 
-    plt.rc('axes', titlesize=20)
-    plt.rc('xtick', labelsize=15) 
-    plt.rc('ytick', labelsize=15) 
+    plt.rc('axes', labelsize=12) 
+    plt.rc('axes', titlesize=15)
+    plt.rc('xtick', labelsize=12) 
+    plt.rc('ytick', labelsize=12) 
     
     figure, axis = plt.subplots(nrows=3, ncols=2, figsize=(12, 10))
     
