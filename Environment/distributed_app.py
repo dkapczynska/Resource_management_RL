@@ -18,7 +18,6 @@ class DistributedApp:
 
         cpu = self.resources[machine_type][0]
         memory = self.resources[machine_type][1]
-
         time_out = 10 * request_size/(self.alpha * cpu + self.beta * memory)  # the bigger the resources the smaller time out
         time.sleep(time_out)
 
@@ -26,6 +25,7 @@ class DistributedApp:
         """Take from the queue; this spawns as a separate Process"""
         while True:
             queue_item = queue.get()
+            assert 0 < queue_item < 50
             if str(queue_item) == "DONE":
                 break
             else:
@@ -59,6 +59,7 @@ class DistributedApp:
         for count in self.queue_array:
             self._master_node_proc(count, qq)
         # run all worker processes
+        assert 0 < len(self.machines) < 53
         all_worker_procs = self._start_worker_procs(qq)
 
         # wait the processes to finish
