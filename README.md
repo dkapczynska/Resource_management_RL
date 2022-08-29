@@ -38,8 +38,3 @@ Storage(vm1={"cpu": 8, "memory": 8, "capacity": 15, "cost": 20},
         vm3={"cpu": 32, "memory": 24, "capacity": 3, "cost": 75})
   ```
 
-
-
-
-![image](https://user-images.githubusercontent.com/72708718/186509527-ec4caca1-5bc0-4631-a14f-ad5e1fdfb6dd.png)
-
