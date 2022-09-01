@@ -7,9 +7,11 @@ Resource allocation strategies that have been tested:
 02. Adventage Actor-Critic agent 
 03. Proximal Policy Optimization agent
 04. Deep Q-network agent
+05. Double Deep Q-network agent
+06. Dueling Double Deep Q-network agent
 
 ## Simulation environement
-The agents are trained in custom envinment that follow OpenAI Gym structure. The simulation enviroment simulates real distribuited application behaviors performing parallel processes depending on number of virtual machines that can be removed or added dynamically after every simulation step. All the processes share the same queue of requests. Workload is genereted randomly, requests have different sizes. Quality of service is measured by average speed per requests for each simulation step. The objective is to minimize the cost of resources while maintaining SLA, so utility function is given by:
+The agents are trained in custom envinment that follow OpenAI Gym structure. The simulation enviroment simulates real distribuited application behaviors performing parallel processes depending on number of virtual machines that can be removed or added dynamically after every simulation step. All the processes share the same queue of requests. Workload is genereted randomly, requests have different sizes. Quality of service is measured by average time needed per request for each simulation step. The objective is to minimize the cost of resources while maintaining SLA, so utility function is given by:
 
  ```sh
   def _calculate_utility_function(self, qos, cost):
@@ -22,9 +24,8 @@ The agents are trained in custom envinment that follow OpenAI Gym structure. The
 
 Reward is given to the agent accordingly to the formula:
   ```sh
-  def _calculate_reward(self, qos, prev_cost, cost):
-        if qos < self.sla:
-            return -1
+  if qos < self.sla:
+            return -0.5
         elif prev_cost >= cost:
             return 1
         else:
