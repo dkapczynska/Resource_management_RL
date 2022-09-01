@@ -30,3 +30,10 @@ def viz_performance(cumulative_reward, utility_function, qos, queue_len, cost, n
     axis[2, 1].set_title("No of virtual machines in use")
 
     plt.show()
+    
+def print_stats(value, quality_of_service, queue_len, cost_lst,no_of_vm_lst):
+    print("Cumulative reward at the end of the test: ", value[-1])
+    print("Avg cost per step: ", np.round(np.mean(cost_lst), 2))
+    print("Avg quality of service: ", np.round(np.mean(quality_of_service), 2))
+    print("Avg no of requests: ", np.mean(queue_len))
+    print("Avg no of virtual machines: ", np.mean(no_of_vm_lst))
