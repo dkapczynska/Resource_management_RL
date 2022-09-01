@@ -91,8 +91,8 @@ class Sim(Env):
         Number of new requests coming arriving to the system every simulation step
         """
         self.queue_array = []  # clear the queue
-        for request in range(0, random.randint(10, 15)):  # fill in the queue with requests
-            request_size = random.randint(1, 5)
+        for request in range(0, random.randint(12, 15)):  # fill in the queue with requests
+            request_size = random.randint(1, 3)
             self.queue_array.append(request_size)
 
     def _calculate_cost(self):
@@ -113,8 +113,10 @@ class Sim(Env):
         request_completed = len(self.queue_array)
         if request_completed == 0:
             qos = 0
+        elif time_per_step == 0:
+            qos = request_completed
         else:
-            qos = np.round_(time_per_step / request_completed, 4)
+            qos = np.round_(request_completed / time_per_step, 4)
         return qos
 
     def _calculate_reward(self, qos, prev_cost, cost):
@@ -124,7 +126,7 @@ class Sim(Env):
         """
         # print("Prev cost: ", prev_cost, "current cost", cost)
         if qos < self.sla:
-            return -1
+            return -0.5
         elif prev_cost >= cost:
             return 1
         else:
@@ -146,7 +148,7 @@ class Sim(Env):
             self.vm_2 += 1
 
         elif (action == 3) & (self.vm_3 < self.storage.vm3["capacity"]):  # add VM type III
-            self.vm_3 += 3
+            self.vm_3 += 1
 
         elif (action == 4) & (self.vm_1 > 0):  # remove VM type I from system
             self.vm_1 -= 1
@@ -162,6 +164,7 @@ class Sim(Env):
 
     def _simulate_distributed_app(self):
         # prepare arguments to pass to the application
+        machines, vm1_lst, vm2_lst, vm3_lst = [], [], [], []
         vm1_lst = ['vm1'] * self.vm_1
         vm2_lst = ['vm2'] * self.vm_2
         vm3_lst = ['vm3'] * self.vm_3
