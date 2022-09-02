@@ -13,6 +13,7 @@ class Sim(Env):
                  vm_2,
                  vm_3,
                  steps,
+                 scenario='train',  # possible 'train' , 'test_1', 'test_2', 'test_3'
                  alpha=0.5,
                  beta=0.5):
         """
@@ -67,7 +68,7 @@ class Sim(Env):
 
         """
         super(Sim, self).__init__()
-        
+
         self.sla = sla
         self.vm_1 = vm_1
         self.vm_2 = vm_2
@@ -79,6 +80,7 @@ class Sim(Env):
         self.steps_init = steps
         self.alpha = alpha
         self.beta = beta
+        self.scenario = scenario
         self.request_completed = 0
         self.queue_array = []
         self.state = 0
@@ -86,14 +88,29 @@ class Sim(Env):
         self.action_space = Discrete(7)
         self.observation_space = Box(low=np.float32(np.array([-500])), high=np.float32(np.array([500])))
 
-    def _generate_workload(self):  # <-------------------------------------- FIX:  postac kolejki
+    def _generate_workload(self):
         """
         Number of new requests coming arriving to the system every simulation step
         """
-        self.queue_array = []  # clear the queue
-        for request in range(0, random.randint(12, 15)):  # fill in the queue with requests
-            request_size = random.randint(1, 3)
-            self.queue_array.append(request_size)
+        if self.scenario == 'train':
+            lines = [line.strip() for line in open("Environment/Scenarios/train_scenario.txt", 'r')]
+            queue_array = [int(el) for _, el in enumerate(lines)]
+            self.queue_array = [request + random.randint(-3, 3) for _, request in enumerate(queue_array)]
+        elif self.scenario == 'test_scenario_1':
+            lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_1.txt", 'r')]
+            self.queue_array = [int(el) for _, el in enumerate(lines)]
+        elif self.scenario == 'test_scenario_2':
+            lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_2.txt", 'r')]
+            self.queue_array = [int(el) for _, el in enumerate(lines)]
+        elif self.scenario == 'test_scenario_3':
+            lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_3.txt", 'r')]
+            self.queue_array = [int(el) for _, el in enumerate(lines)]
+        else:
+            print("No scenario chosen, fully stochastic scenario used.")
+            self.queue_array = []  # clear the queue
+            for request in range(0, random.randint(12, 15)):  # fill in the queue with requests
+                request_size = random.randint(1, 3)
+                self.queue_array.append(request_size)
 
     def _calculate_cost(self):
         vm1_cost = self.storage.vm1['cost'] * self.vm_1
@@ -106,7 +123,7 @@ class Sim(Env):
         if qos >= self.sla:
             penalty = 0
         else:
-            penalty = 100
+            penalty = 50
         self.state = ((self.state + cost) / 2) + penalty
 
     def _calculate_quality_of_service(self, time_per_step):
@@ -126,7 +143,7 @@ class Sim(Env):
         """
         # print("Prev cost: ", prev_cost, "current cost", cost)
         if qos < self.sla:
-            return -0.5
+            return -1
         elif prev_cost >= cost:
             return 1
         else:
@@ -164,7 +181,6 @@ class Sim(Env):
 
     def _simulate_distributed_app(self):
         # prepare arguments to pass to the application
-        machines, vm1_lst, vm2_lst, vm3_lst = [], [], [], []
         vm1_lst = ['vm1'] * self.vm_1
         vm2_lst = ['vm2'] * self.vm_2
         vm3_lst = ['vm3'] * self.vm_3
@@ -235,7 +251,7 @@ class Sim(Env):
         return np.array([self.state, ], dtype=np.float32), reward, done, info
 
     def reset(self, **kwargs):
-        
+
         # create storage
         self.storage = Storage(vm1={"cpu": 8, "memory": 8, "capacity": 15, "cost": 20},
                                vm2={"cpu": 16, "memory": 10, "capacity": 10, "cost": 35},
