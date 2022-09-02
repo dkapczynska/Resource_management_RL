@@ -21,15 +21,21 @@ class DistributedApp:
         time_out = 10 * request_size/(self.alpha * cpu + self.beta * memory)  # the bigger the resources the smaller time out
         time.sleep(time_out)
 
-    def _worker_node_proc(self, queue, machine_type):  # <--------- FIX: vm_type add
+    def _worker_node_proc(self, queue, done_q, machine_type):  
         """Take from the queue; this spawns as a separate Process"""
-        while True:
-            queue_item = queue.get()
-            assert 0 < queue_item < 50
-            if str(queue_item) == "DONE":
-                break
-            else:
-                self._complete_request(queue_item, machine_type)
+        try:
+            while True:
+                queue_item = queue.get()
+                # assert 0 < queue_item < 50
+                if str(queue_item) == "DONE":
+                    done_q.put(queue_item)
+                    break
+                else:
+                    self._complete_request(queue_item, machine_type)
+        except:
+            print("Broken pipe")
+            
+        return True
 
     def _master_node_proc(self, count, queue):
         """Write integers into the queue.  A reader_proc() will read them from the queue"""
@@ -39,12 +45,12 @@ class DistributedApp:
         for ii in range(0, len(self.machines)):  # Tell all workers to stop...
             queue.put("DONE")
 
-    def _start_worker_procs(self, qq):
+    def _start_worker_procs(self, qq, done_q):
         """Start the worker processes and return all in a dict {proc : VM type}"""
         all_worker_procs = list()
         for ii in range(0, len(self.machines)):
             machine_type = self.machines[ii]
-            worker_p = Process(target=self._worker_node_proc, args=(qq, machine_type))
+            worker_p = Process(target=self._worker_node_proc, args=(qq, done_q, machine_type))
             # print("Machine type: ", machine_type, "process: ", worker_p)
             worker_p.daemon = True
             worker_p.start()
@@ -53,19 +59,22 @@ class DistributedApp:
 
     def _perform_all_requests(self):
         qq = Queue()
+        done_q = Queue()
 
         start = time.time()
         # prepare the queue
         for count in self.queue_array:
             self._master_node_proc(count, qq)
         # run all worker processes
-        assert 0 < len(self.machines) < 53
-        all_worker_procs = self._start_worker_procs(qq)
+        # assert 0 < len(self.machines) < 53
+        all_worker_procs = self._start_worker_procs(qq, done_q)
 
         # wait the processes to finish
         for _, a_worker_proc in enumerate(all_worker_procs):
             a_worker_proc.join()  # Wait for worker node to finish
             # print("Finished:", a_worker_proc)
+            
+        done_q.close()
         qq.close()
 
         end = time.time()
