@@ -19,8 +19,7 @@ class DistributedApp:
 
         cpu = self.resources[machine_type][0]
         memory = self.resources[machine_type][1]
-        time_out = 10 * request_size / (
-                    self.alpha * cpu + self.beta * memory)  # the bigger the resources the smaller time out
+        time_out = request_size / (self.alpha * cpu + self.beta * memory)  # the bigger the resources the smaller time out
         time.sleep(time_out)
 
     def _worker_node_proc(self, queue, done_q, machine_type):
