@@ -13,6 +13,7 @@ class Sim(Env):
                  vm_2,
                  vm_3,
                  steps,
+                 penalty,
                  scenario='train',  # possible 'train' , 'test_1', 'test_2', 'test_3'
                  alpha=0.5,
                  beta=0.5):
@@ -80,6 +81,7 @@ class Sim(Env):
         self.steps_init = steps
         self.alpha = alpha
         self.beta = beta
+        self.penalty = penalty
         self.scenario = scenario
         self.request_completed = 0
         self.queue_array = []
@@ -98,13 +100,16 @@ class Sim(Env):
             self.queue_array = [request + random.randint(-3, 3) for _, request in enumerate(queue_array)]
         elif self.scenario == 'test_scenario_1':
             lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_1.txt", 'r')]
-            self.queue_array = [int(el) for _, el in enumerate(lines)]
+            queue_array = [int(el) for _, el in enumerate(lines)]
+            self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
         elif self.scenario == 'test_scenario_2':
             lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_2.txt", 'r')]
-            self.queue_array = [int(el) for _, el in enumerate(lines)]
+            queue_array = [int(el) for _, el in enumerate(lines)]
+            self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
         elif self.scenario == 'test_scenario_3':
             lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_3.txt", 'r')]
-            self.queue_array = [int(el) for _, el in enumerate(lines)]
+            queue_array = [int(el) for _, el in enumerate(lines)]
+            self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
         else:
             print("No scenario chosen, fully stochastic scenario used.")
             self.queue_array = []  # clear the queue
@@ -116,15 +121,15 @@ class Sim(Env):
         vm1_cost = self.storage.vm1['cost'] * self.vm_1
         vm2_cost = self.storage.vm2['cost'] * self.vm_2
         vm3_cost = self.storage.vm3['cost'] * self.vm_3
-        cost = np.round_((vm1_cost + vm2_cost + vm3_cost) / 3, 2)  # np.sqrt
+        cost = vm1_cost + vm2_cost + vm3_cost
         return cost
 
     def _calculate_utility_function(self, qos, cost):
         if qos >= self.sla:
-            penalty = 0
+            p = 0
         else:
-            penalty = 50
-        self.state = ((self.state + cost) / 2) + penalty
+            p = self.penalty
+        self.state = ((self.state + cost) / 2) + p
 
     def _calculate_quality_of_service(self, time_per_step):
         request_completed = len(self.queue_array)
@@ -133,7 +138,7 @@ class Sim(Env):
         elif time_per_step == 0:
             qos = request_completed
         else:
-            qos = np.round_(request_completed / time_per_step, 4)
+            qos = request_completed / time_per_step
         return qos
 
     def _calculate_reward(self, qos, prev_cost, cost):
@@ -143,9 +148,11 @@ class Sim(Env):
         """
         # print("Prev cost: ", prev_cost, "current cost", cost)
         if qos < self.sla:
-            return -1
-        elif prev_cost >= cost:
+            return -0.5
+        elif prev_cost > cost:
             return 1
+        # elif prev_cost == cost:
+          #  return 0.5
         else:
             return 0
 
@@ -241,7 +248,7 @@ class Sim(Env):
 
         info = {'Quality of Service': qos,
                 'Current cost': cost,
-                'Queue len': len(self.queue_array),
+                'Semi-stochastic queue': self.queue_array,
                 'Timer': time_per_step,
                 'VM type I': self.vm_1,
                 'VM type II': self.vm_2,
@@ -262,7 +269,7 @@ class Sim(Env):
         self.vm_2 = self.vm_2_init
         self.vm_3 = self.vm_3_init
         self.steps = self.steps_init
-        self.state = 0
+        self.state = self._calculate_cost()
         self.request_completed = 0
         self.queue_array = []
         return np.array([self.state, ], dtype=np.float32)
