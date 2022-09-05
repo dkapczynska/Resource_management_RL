@@ -148,7 +148,7 @@ class Sim(Env):
         """
         # print("Prev cost: ", prev_cost, "current cost", cost)
         if qos < self.sla:
-            return -0.5
+            return -1
         elif prev_cost > cost:
             return 1
         # elif prev_cost == cost:
