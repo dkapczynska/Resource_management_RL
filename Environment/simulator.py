@@ -84,12 +84,11 @@ class Sim(Env):
         self.penalty = penalty
         self.scenario = scenario
         self.request_completed = 0
-        self.max_util = 0
         self.queue_array = []
         self.state = 0
         self.storage = Storage({}, {}, {})
         self.action_space = Discrete(7)
-        self.observation_space = Box(low=np.float32(np.array([0])), high=np.float32(np.array([1])))
+        self.observation_space = Box(low=np.float32(np.array([-500])), high=np.float32(np.array([500])))
 
     def _generate_workload(self):
         """
@@ -98,25 +97,21 @@ class Sim(Env):
         if self.scenario == 'train':
             lines = [line.strip() for line in open("Environment/Scenarios/train_scenario.txt", 'r')]
             queue_array = [int(el) for _, el in enumerate(lines)]
-            self.queue_array = queue_array
-            # self.queue_array = [request + random.randint(-3, 3) for _, request in enumerate(queue_array)]
+            self.queue_array = [request + random.randint(-3, 3) for _, request in enumerate(queue_array)]
         elif self.scenario == 'test_scenario_1':
             lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_1.txt", 'r')]
             queue_array = [int(el) for _, el in enumerate(lines)]
-            self.queue_array = queue_array
-            #self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
+            self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
         elif self.scenario == 'test_scenario_2':
             lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_2.txt", 'r')]
             queue_array = [int(el) for _, el in enumerate(lines)]
-            self.queue_array = queue_array
-            #self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
+            self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
         elif self.scenario == 'test_scenario_3':
             lines = [line.strip() for line in open("Environment/Scenarios/test_scenario_3.txt", 'r')]
             queue_array = [int(el) for _, el in enumerate(lines)]
-            self.queue_array = queue_array
-            #self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
+            self.queue_array = [request + random.randint(-1, 0) for _, request in enumerate(queue_array)]
         else:
-            #print("No scenario chosen, fully stochastic scenario used.")
+            print("No scenario chosen, fully stochastic scenario used.")
             self.queue_array = []  # clear the queue
             for request in range(0, random.randint(12, 15)):  # fill in the queue with requests
                 request_size = random.randint(1, 3)
@@ -134,7 +129,7 @@ class Sim(Env):
             p = 0
         else:
             p = self.penalty
-        self.state = ((((self.state + cost) / 2) + p)/self.max_util)*100
+        self.state = ((self.state + cost) / 2) + p
 
     def _calculate_quality_of_service(self, time_per_step):
         request_completed = len(self.queue_array)
@@ -154,12 +149,12 @@ class Sim(Env):
         # print("Prev cost: ", prev_cost, "current cost", cost)
         if qos < self.sla:
             return -1
-        elif prev_cost >= cost:
+        elif prev_cost > cost:
             return 1
-        elif prev_cost == cost:
-            return 0
+        # elif prev_cost == cost:
+          #  return 0.5
         else:
-            return -0.5
+            return 0
 
     def _apply_action(self, action):
         """
@@ -274,15 +269,7 @@ class Sim(Env):
         self.vm_2 = self.vm_2_init
         self.vm_3 = self.vm_3_init
         self.steps = self.steps_init
-        
-        # calculate max utility function (for normalization) 
-        vm1_max_cost = self.storage.vm1['cost'] * self.storage.vm1['capacity']
-        vm2_max_cost = self.storage.vm2['cost'] * self.storage.vm2['capacity']
-        vm3_max_cost = self.storage.vm3['cost'] * self.storage.vm3['capacity']
-        max_cost = vm1_max_cost + vm2_max_cost + vm3_max_cost
-        self.max_util = max_cost * self.steps
-        
-        self.state = self._calculate_cost()/self.max_util * 100
+        self.state = self._calculate_cost()
         self.request_completed = 0
         self.queue_array = []
         return np.array([self.state, ], dtype=np.float32)
