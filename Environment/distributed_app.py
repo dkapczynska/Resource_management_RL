@@ -37,9 +37,11 @@ class DistributedApp:
         """Write integers into the queue.  A reader_proc() will read them from the queue"""
         for ii in range(0, count - 1):
             queue.put(count)  # Put 'count' numbers into queue
+        time.sleep(0.1)
 
         for ii in range(0, len(self.machines)):  # Tell all workers to stop...
             queue.put("DONE")
+        time.sleep(0.1)
 
     def _start_worker_procs(self, qq, done_q):
         """Start the worker processes and return all in a dict {proc : VM type}"""
@@ -71,6 +73,8 @@ class DistributedApp:
 
         done_q.close()
         qq.close()
+        done_q.join_thread()
+        qq.join_thread()
 
         end = time.time()
         return end - start
