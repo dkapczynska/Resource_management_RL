@@ -9,33 +9,3 @@ Resource allocation strategies that have been tested:
 04. Deep Q-network agent
 05. Double Deep Q-network agent
 06. Dueling Double Deep Q-network agent
-
-## Simulation environement
-The agents are trained in custom envinment that follow OpenAI Gym structure. The simulation enviroment simulates real distribuited application behaviors performing parallel processes depending on number of virtual machines that can be removed or added dynamically after every simulation step. All the processes share the same queue of requests. Workload is genereted randomly, requests have different sizes. Quality of service is measured by average time needed per request for each simulation step. The objective is to minimize the cost of resources while maintaining SLA, so utility function is given by:
-
- ```sh
-  def _calculate_utility_function(self, qos, cost):
-        if qos >= self.sla:
-            penalty = 0
-        else:
-            penalty = 100
-        self.state = ((self.state + cost) / 2) + penalty
-  ```
-
-Reward is given to the agent accordingly to the formula:
-  ```sh
-  if qos < self.sla:
-            return -0.5
-        elif prev_cost >= cost:
-            return 1
-        else:
-            return 0
-  ```
-Current capacity of the storage is:
- 
- ```sh
-Storage(vm1={"cpu": 8, "memory": 8, "capacity": 15, "cost": 20},
-        vm2={"cpu": 16, "memory": 10, "capacity": 10, "cost": 35},
-        vm3={"cpu": 32, "memory": 24, "capacity": 3, "cost": 75})
-  ```
-
