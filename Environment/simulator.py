@@ -19,53 +19,7 @@ class Sim(Env):
         """
         Custom environment that follows gym interface.
 
-        Attributes
-        -----------
-        qos(int):
-            Quality of service metric describing how many requests were completed per seconds of simulation
-
-        cost(int):
-            Current cost of system performance
-
-        vm_1(int):
-            Number of virtual machine type I that are currently in use
-
-        vm_2(int):
-            Number of virtual machine type II that are currently in use
-
-        vm_3(int):
-            Number of virtual machine type III that are currently in use
-
-        alpha(float):
-            Constant numerical value that assign weight to CPU in total computing power equation
-
-        beta(float):
-            Constant numerical value that assign weight to memory in total computing power equation
-
-        gamma(float):
-            Numerical value of discounting factor
-
-        request_completed(int):
-            Number of requests that have been successfully completed since beginning of episode
-
-        queue_array(int):
-            Number of request waiting in the queue (for the current state)
-
-        computing_power(float):
-            Numerical value of metric that represents computing power (for the current state)
-
-        action_space(Discrete object):
-            Discrete object of class from OpenAI Gym used to describe structure of action space
-
-        state(int):
-            Numerical value describing current state, value of utility functions
-
-        observation_space(Box object):
-            Box object of class from OpenAI Gym used to describe structure of observation space
-
-        sim_length(int):
-            Number of time units that simulation will last. Each step takes one time unit
-
+        
         """
         super(Sim, self).__init__()
 
@@ -84,7 +38,7 @@ class Sim(Env):
         self.scenario = scenario
         self.request_completed = 0
         self.max_util = 0
-        self.queue_array = []
+        self.request = 0
         self.state = 0
         self.storage = Storage({}, {}, {})
         self.action_space = Discrete(7)
@@ -92,30 +46,22 @@ class Sim(Env):
 
     def _generate_workload(self):
         """
-        Number of new requests coming arriving to the system every simulation step
+         FIX: READS ONLY ONE REQUEST PER SIMULATION STEP AND DELETES THEM
         """
-        # open the file and read 10 lines
+        # read only first line from a file
         filename = str(self.scenario)
-        queue = []
         with open(filename, 'r') as fr:
-            cnt = 1
-            for line in fr:  # read 10 lines
-                if cnt <= 10:
-                    queue.append(int(line.strip()))
-                    cnt += 1
-                else:
-                    break
-                    
+            self.request = float(fr.readline().rstrip())*10
+    
+        # delete this line from a file
             cnt = 1        
-            lines = fr.readlines()       
+            lines = fr.readlines()
             with open(filename, 'w') as fw:
-                for line in lines:  # delete 10 lines
-                    if cnt < 10:
+                for line in lines:  
+                    if cnt == 1:
                         fw.write(line)
                     else:
                         break
-                        
-        self.queue_array = queue
         
 
     def _calculate_cost(self):
@@ -133,13 +79,7 @@ class Sim(Env):
         self.state = ((((self.state + cost) / 2) + p)/self.max_util)*100
 
     def _calculate_quality_of_service(self, time_per_step):
-        request_completed = len(self.queue_array)
-        if request_completed == 0:
-            qos = 0
-        elif time_per_step == 0:
-            qos = request_completed
-        else:
-            qos = request_completed / time_per_step
+        qos = self.request / time_per_step
         return qos
 
     def _calculate_reward(self, qos, prev_cost, cost):
@@ -199,13 +139,13 @@ class Sim(Env):
                      'vm2': [self.storage.vm2['cpu'], self.storage.vm2['memory']],
                      'vm3': [self.storage.vm3['cpu'], self.storage.vm3['memory']]}
 
-        distributed_app = DistributedApp(queue_array=self.queue_array,
+        distributed_app = DistributedApp(request=self.request,
                                          alpha=self.alpha,
                                          beta=self.beta,
                                          machines=machines,
                                          resources=resources)
 
-        time_per_step = distributed_app._perform_all_requests()
+        time_per_step = distributed_app._perform_request()
         return time_per_step
 
     def step(self, action):
@@ -249,7 +189,7 @@ class Sim(Env):
 
         info = {'Quality of Service': qos,
                 'Current cost': cost,
-                'Queue': self.queue_array,
+                'Request': self.request,
                 'Timer': time_per_step,
                 'VM type I': self.vm_1,
                 'VM type II': self.vm_2,
@@ -288,6 +228,6 @@ class Sim(Env):
 
     def close(self):
         """
-        Clean up <------------------- what should be included here?
+        Clean up
         """
         return 0
