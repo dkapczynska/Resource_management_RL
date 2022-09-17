@@ -14,7 +14,7 @@ def copy_scenario(scenario_name, model, multiply=10):
     open(copy_name, "w").writelines([l for l in open(name).readlines()]*multiply)
 
 
-def viz_performance(cumulative_reward, utility_function, qos, no_of_vm, sla, requests, timesteps=1000):
+def viz_performance(cumulative_reward, utility_function, qos, no_of_vm, sla, requests):
     
     def normalize(x):
         return [round((i - min(x)) / (max(x) - min(x)), 2) for i in x]
@@ -25,13 +25,12 @@ def viz_performance(cumulative_reward, utility_function, qos, no_of_vm, sla, req
     plt.rc('xtick', labelsize=12)
     plt.rc('ytick', labelsize=12)
     
-    steps = list(range(1, timesteps+1))
+    steps = list(range(1, len(cumulative_reward)+1))
     requests_norm = normalize(requests)
 
     figure, axis = plt.subplots(nrows=2, ncols=2, figsize=(12, 10))
     
     axis[0, 0].plot(steps, cumulative_reward)
-    axis[0, 0].plot(steps, requests, color='gray', linestyle='--')
     axis[0, 0].set_title("Cumulative reward")
 
     axis[0, 1].plot(steps, utility_function)
@@ -44,7 +43,6 @@ def viz_performance(cumulative_reward, utility_function, qos, no_of_vm, sla, req
     axis[1, 0].set_title("QoS & SLA")
 
     axis[1, 1].plot(steps, no_of_vm)
-    axis[1, 1].plot(steps, requests, color='gray', linestyle='--')
     axis[1, 1].set_title("No of virtual machines in use")
 
     plt.show()
@@ -56,7 +54,6 @@ def print_stats(value, quality_of_service, state_lst, no_of_vm_lst):
     print("Avg quality of service: ", np.round(np.mean(quality_of_service), 2))
     print("Avg no of virtual machines: ", np.mean(no_of_vm_lst))
 
-# ------------------------------------------------------------------------------------------------- TEST FOR STABLE BASELINES
 def test_model(SLA, VM_TYPE1, VM_TYPE2, VM_TYPE3, STEPS, SCENARIO, PENALTY, ALPHA, BETA, model='False'):
     env = Sim(sla = SLA,
               vm_1 = VM_TYPE1,
@@ -85,22 +82,21 @@ def test_model(SLA, VM_TYPE1, VM_TYPE2, VM_TYPE3, STEPS, SCENARIO, PENALTY, ALPH
         else:
             action = env.action_space.sample()
             
-        obs, rewards, done, info = env.step(action)
+        obs, reward, done, info = env.step(action)
 
         # save the resuls
-        requests += info['Queue']
-        for i in range(0,10):  # add this 10 times to the shapes fit with the workload
-            culumative_reward+=rewards
-            value.append(culumative_reward)
-            quality_of_service.append(info['Quality of Service'])
-            utility_function.append(obs)
-            no_of_vm_lst.append(info['VM type I'] + info['VM type II'] + info['VM type III'])
+        requests.append(info['Request'])
+        culumative_reward+=reward
+        value.append(culumative_reward)
+        quality_of_service.append(info['Quality of Service'])
+        utility_function.append(obs)
+        no_of_vm_lst.append(info['VM type I'] + info['VM type II'] + info['VM type III'])
 
         if done: 
             print('info', info)
             break
      
-    utility_function = list(np.reshape(utility_function, [STEPS*10,]))
+    utility_function = list(np.reshape(utility_function, [STEPS,]))
     viz_performance(cumulative_reward=value,
                     utility_function=utility_function,
                     qos=quality_of_service,
@@ -109,8 +105,6 @@ def test_model(SLA, VM_TYPE1, VM_TYPE2, VM_TYPE3, STEPS, SCENARIO, PENALTY, ALPH
                     requests=requests)
 
     print_stats(value, quality_of_service, utility_function, no_of_vm_lst)
-
-# ------------------------------------------------------------------------------------------------- TEST FOR DDQN AND D3QN
 
 def test_model_Qlearning(best_net, SLA, VM_TYPE1, VM_TYPE2, VM_TYPE3, STEPS, SCENARIO, PENALTY, ALPHA, BETA):
     
@@ -150,19 +144,18 @@ def test_model_Qlearning(best_net, SLA, VM_TYPE1, VM_TYPE2, VM_TYPE3, STEPS, SCE
         state = state_next_re
 
         # save the resuls
-        requests += info['Queue']
-        for i in range(0,10):  # add this 10 times to the shapes fit with the workload
-            culumative_reward+=reward
-            value.append(culumative_reward)
-            quality_of_service.append(info['Quality of Service'])
-            utility_function.append(state_next)
-            no_of_vm_lst.append(info['VM type I'] + info['VM type II'] + info['VM type III'])
+        requests.append(info['Request'])
+        culumative_reward+=reward
+        value.append(culumative_reward)
+        quality_of_service.append(info['Quality of Service'])
+        utility_function.append(state_next)
+        no_of_vm_lst.append(info['VM type I'] + info['VM type II'] + info['VM type III'])
 
         if terminal: 
             print('info', info)
             break
      
-    utility_function = list(np.reshape(utility_function, [STEPS*10,]))
+    utility_function = list(np.reshape(utility_function, [STEPS,]))
     viz_performance(cumulative_reward=value,
                     utility_function=utility_function,
                     qos=quality_of_service,
