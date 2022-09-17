@@ -7,8 +7,8 @@ warnings.filterwarnings("ignore")
 
 class DistributedApp:
 
-    def __init__(self, queue_array, alpha, beta, machines, resources):
-        self.queue_array = queue_array
+    def __init__(self, request, alpha, beta, machines, resources):
+        self.request = request
         self.alpha = alpha
         self.beta = beta
         self.machines = machines  # list of element 'vm1, vm2, vm3
@@ -33,10 +33,10 @@ class DistributedApp:
                 self._complete_request(queue_item, machine_type)
         return True
 
-    def _master_node_proc(self, count, queue):
+    def _master_node_proc(self, queue_array, queue):
         """Write integers into the queue.  A reader_proc() will read them from the queue"""
-        for ii in range(0, count - 1):
-            queue.put(count)  # Put 'count' numbers into queue
+        for ii in queue_array:
+            queue.put(ii)  # Put 'count' numbers into queue
         time.sleep(0.1)
 
         for ii in range(0, len(self.machines)):  # Tell all workers to stop...
@@ -55,21 +55,28 @@ class DistributedApp:
             all_worker_procs.append(worker_p)
         return all_worker_procs
 
-    def _perform_all_requests(self):
+    def _perform_request(self):
+        """
+        The request has be to split up for the partitions
+        and distribuited among the workers
+        """
         qq = Queue()
         done_q = Queue()
         start = time.time()
-
-        # prepare the queue
-        for count in self.queue_array:
-            self._master_node_proc(count, qq)
+        
+        # total number of CPU cores in the cluster
+        cores = self.alpha * (self.resources['vm1'][0] + self.resources['vm2'][0] + self.resources['vm3'][0])
+        single_partition = self.request/cores
+        queue_array = [float(single_partition) for i in range(0, int(cores))]
+        
+        self._master_node_proc(queue_array, qq)
+            
         # run all worker processes
         all_worker_procs = self._start_worker_procs(qq, done_q)
 
         # wait the processes to finish
         for _, a_worker_proc in enumerate(all_worker_procs):
             a_worker_proc.join()  # Wait for worker node to finish
-            # print("Finished:", a_worker_proc)
 
         done_q.close()
         qq.close()
